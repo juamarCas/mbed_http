@@ -27,16 +27,22 @@ void post_callback(void);
 HashTable *get_method_table  = NULL;
 HashTable *post_method_table = NULL;
 
+void init_methods();
 void init_http_server();
 
 int main(){
+    init_http_server();
+    add_method_response("GET", "/", get_callback);
+    add_method_response("POST", "/", post_callback);
+    
+    init_http_server();
+}
+
+void init_http_server(){
     int iSetOption = 1;
     int soc = socket(AF_INET, SOCK_STREAM, 0);
     setsockopt(soc, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
 
-    init_http_server();
-    add_method_response("GET", "/", get_callback);
-    add_method_response("POST", "/", post_callback);
 
     if(soc == -1){
         perror("socket");
@@ -98,37 +104,41 @@ int main(){
     close(soc);
     free_table(get_method_table);
     free_table(post_method_table);
-    
 }
 
 
-void init_http_server(){
+void init_methods(){
     /* one hashtable for each kind of http method */
     get_method_table  = create_table(CAPACITY);
     post_method_table = create_table(CAPACITY);
+    
 }
 
 
 uint8_t add_method_response(const char * method,  const char * endpoint, void (*callback)()){
 
-    // some kind of bullshit to store a function as a char array to store it in the hashtable:
+    if(strcmp(endpoint[0], "/")){
+        printf("The enpoint has to strart with \" / \"\n");
+        return 0;
+    }
+    // some kind of bullshit to store a function as a char array in the hashtable
     char func_buff[sizeof(void *)];
     void * pcallback_fun = (void*) callback;
     memcpy(func_buff, &pcallback_fun, sizeof(void *));
 
-    // store the callback in the respective table
     if(!strcmp(method, "GET")){
         ht_insert(get_method_table, (char *)endpoint, func_buff);       
     }else if (!strcmp(method, "POST")){
         ht_insert(post_method_table, (char *)endpoint, func_buff); 
+    }else{
+        //could not find method
+        return 0;
     }
 
     return 1;
 }
 
 uint8_t call_method(const char * method, const char * endpoint){
-    printf("Method: %s\n", method);
-    printf("Endpoint: %s\n", endpoint);
 
     char * call_back;
 
