@@ -2,7 +2,7 @@ GXX     = gcc
 INCLUDE = ./include
 
 all: main.o
-	$(GXX) -o app main.o 
+	$(GXX) -o app main.o -g
 
 debug: main.o
 	$(GXX) -o app main.o -g

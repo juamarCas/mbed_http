@@ -1,3 +1,4 @@
+#define HTTP_REQUEST_MAX_SIZE 256
 
 /*  standard headers  */
 #include <sys/socket.h>
@@ -6,23 +7,19 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string.h>
-//#include <pthread.h>
 #include <search.h>
 
 /*  custom headers  */
-#include <hash_table.h>
+#include "hash_table.h"
+#include "mbed_http_types.h"
 
-/*  custom typedefs  */
-typedef void (*method_callback)(void);
+
 
 uint8_t add_method_response(const char * method,  const char * endpoint, method_callback);
 uint8_t call_method(const char * method, const char * enpoint);
 
-void get_callback(void);
-void post_callback(void);
-
-
-#define HTTP_REQUEST_MAX_SIZE 256
+http_res get_callback(http_req * req);
+http_res post_callback(http_req * req);
 
 HashTable *get_method_table  = NULL;
 HashTable *post_method_table = NULL;
@@ -31,7 +28,8 @@ void init_methods();
 void init_http_server();
 
 int main(){
-    init_http_server();
+    init_methods();
+    
     add_method_response("GET", "/", get_callback);
     add_method_response("POST", "/", post_callback);
     
@@ -43,6 +41,7 @@ void init_http_server(){
     int soc = socket(AF_INET, SOCK_STREAM, 0);
     setsockopt(soc, SOL_SOCKET, SO_REUSEADDR, (char*)&iSetOption, sizeof(iSetOption));
 
+    uint8_t _exitloop = 0;
 
     if(soc == -1){
         perror("socket");
@@ -71,17 +70,28 @@ void init_http_server(){
     }
 
 
-    while (1) {
+    while (!_exitloop) {
         int client_fd = accept(soc, 0, 0);
         char buff[HTTP_REQUEST_MAX_SIZE] = {0};
         recv(client_fd, buff, HTTP_REQUEST_MAX_SIZE, 0);
 
         // estract the http method from the petition
+        buff[sizeof(buff) - 1] = '\0';
         char * method = strtok(buff, " ");
+
+        if(method == NULL){
+            printf("Could not extract the HTTP method from request\n");
+            return 1;
+        }
 
         // get the endpoint
         char * enpoint_start = buff + strlen(method) + 1;
         char * endpoint = strtok(enpoint_start, " ");
+
+        if(endpoint == NULL){
+            printf("Could not extract the HTTP endpoint from request\n");
+            return 1;
+        }
 
         call_method(method, endpoint);
         if(!strcmp(method, "GET")){
@@ -115,9 +125,9 @@ void init_methods(){
 }
 
 
-uint8_t add_method_response(const char * method,  const char * endpoint, void (*callback)()){
+uint8_t add_method_response(const char * method,  const char * endpoint, http_res (*callback)()){
 
-    if(strcmp(endpoint[0], "/")){
+    if(endpoint[0] != '/'){
         printf("The enpoint has to strart with \" / \"\n");
         return 0;
     }
@@ -152,7 +162,7 @@ uint8_t call_method(const char * method, const char * endpoint){
         //could not find the endpoint
         //todo: implement error 404
         printf("not found that enpoint: %s\n", endpoint);
-        return 2;
+        return 0;
     }
 
     // again, some kind of bullshit to get the function i want and calling it
@@ -160,17 +170,22 @@ uint8_t call_method(const char * method, const char * endpoint){
     memcpy(&deserialize_func, call_back, sizeof(void *));
 
     method_callback function = (method_callback)deserialize_func;
-    function();
+     (NULL);
 
     
     return 1;
 }
 
-void get_callback(){
+http_res get_callback(http_req * req){
     printf("I am gettingggg\n");
+    uint16_t res_code = 200;
+    http_res res;
+    return res;
 }
 
 
-void post_callback(){
+http_res post_callback(http_req * req){
     printf("I am postingggg\n");
+    http_res a;
+    return a;
 }
