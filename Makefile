@@ -1,13 +1,16 @@
 GXX     = gcc
-INCLUDE = ./include
+TARGET  = bin/app
+SRC     = $(wildcard src/*.c)
+OBJ     = $(patsubst src/%.c, obj/%.o, $(SRC))
 
-all: main.o
-	$(GXX) -o app main.o -g
+default: $(TARGET)
 
-debug: main.o
-	$(GXX) -o app main.o -g
+$(TARGET): $(OBJ)
+	$(GXX) -o $@ $? -g 
 
-main.o: 
-	$(GXX) -c main.c -I$(INCLUDE) -g
+obj/%.o: src/%.c
+	$(GXX) -c $< -o $@ -Iinclude -g
+
 clean:
-	rm -f app *.o
+	rm -f obj/*.o
+	rm -f bin/*
